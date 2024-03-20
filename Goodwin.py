@@ -6,6 +6,7 @@ Created on Wed Jun 13 09:23:43 2018
 """
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 def extractGoodwinParameters( fichier):
@@ -183,22 +184,47 @@ class EcoSphere :
     
     def plot(self):
         record = self.record
-        plt.figure()
+        plt.figure(figsize = (20, 14), tight_layout = True)
+        mpl.rcParams['axes.linewidth'] = 5
+        fs=25
 
         plt.subplot(2, 2, 1)
-        plt.plot(record.t, record.omega, label='omega')
-        plt.legend()
-        plt.grid(True)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.omega, label='omega', color='#045a8d', linewidth=0.5)     
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('$\omega$',fontsize=fs)
+        
+        
         
         plt.subplot(2, 2, 2)
-        plt.plot(record.t, record.lamda, label='lamda')
-        plt.legend()
-        plt.grid(True)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        #plt.plot(record.t, record.lamda, ls='-', linewidth=0.5, marker='x', markersize=5, markevery=100, label='lamda', color='#045a8d')
+        plt.plot(record.t, record.lamda, ls='-', linewidth=0.5, label='lamda', color='#045a8d')
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('$\lambda$',fontsize=fs)
+        
+        
         
         plt.subplot(2, 2, 3)
-        plt.plot(record.t, record.N, label='N')
-        plt.legend()
-        plt.grid(True)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.N, label='N',linewidth=6, color='#045a8d')
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('N',fontsize=fs)
         
         plt.tight_layout()
     

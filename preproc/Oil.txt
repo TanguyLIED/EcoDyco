@@ -1,5 +1,5 @@
 type : stock
-name : petrole
+name : oil
 total stock : 500000
 Xh_init : 500000
 Xl_init : 0

@@ -1,5 +1,5 @@
 type : stock
-name : charbon
+name : coal
 total stock : 400000
 Xh_init : 400000
 Xl_init : 0

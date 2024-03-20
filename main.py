@@ -11,6 +11,9 @@ import os
 import PhysicalWorld as phy
 
 
+#%%
+
+
 ######################################################
 # begin  PARAMS users
 
@@ -31,10 +34,10 @@ tmax = 2000
 rep_p = 'preproc/'
 
 # save data using xls format
-save_xls = True
+save_txt = False
 
 # save figures
-save_plot = True                # True = save figures OR False = show figures
+save_plot = False                # True = save figures OR False = show figures
 plot_name = 'fig-out'
 
 # end PARAMS users
@@ -42,10 +45,12 @@ plot_name = 'fig-out'
 print('')
 print('Economical model is :\t\t' + eco_engine)
 print('Figures will be saved :\t\t' + str(save_plot))
-print('Data will be saved :\t\t' + str(save_xls))
+print('Data will be saved :\t\t' + str(save_txt))
 
+#Create the Physcial World
 phySphere = phy.createPhysicalWorld("world.txt", rep_p, deltat)
 
+#Create the Economic Sphere
 if eco_engine == "solow":
     import Solow as eco 
     ecoSphere = eco.createEcoSphere("solow.txt", rep_p, phySphere, deltat)   
@@ -68,18 +73,25 @@ print("\n>>\t WORLD SUCESSFULLY CREATED \n")
 
 
 
+#Update both PhyWorld and EcoSphere at each step
 for k in range(int(tmax/deltat)):
     phySphere.iterate()
     ecoSphere.iterate(phySphere)
     inputs = ecoSphere.inputsToPhySphere(phySphere)
     phySphere.actualize(inputs)
 
- 
+#%% 
+
+
 # plot graphs
 plt.close("all")
 phySphere.plot()
-ecoSphere.plot()
+#ecoSphere.plot()
 
+
+
+
+#%%
 
 # 
 #*****************************************************************************************************
@@ -114,11 +126,11 @@ else :
     plt.show( block=False)
 #
 #*****************************************************************************************************
-# Export data using CSV format to be opened with excell
+# Export data using txt format
 #*****************************************************************************************************
 # 
 
-if save_xls:
+if save_txt:
     
             
     f = 'postproc' + rep + '/'
@@ -126,25 +138,18 @@ if save_xls:
     
     for j in  range(phySphere.n_cells):
         df = pd.DataFrame(vars(phySphere.cells[j].cell.record))
-        fichier = "Feuillet_" + str(j) + ".xlsx"
-        #print fichier
-        writer = pd.ExcelWriter( f + fichier, engine='xlsxwriter')
-        name = "Feuillet_" + str(j)
-        df.to_excel(writer, sheet_name=name)
-        writer.close()
-        
+        fichier = "Feuillet_" + str(j) + ".txt"                    #Remplacer Feuillet par le nom du bien 
+        df.to_csv( f + fichier, sep='\t', index=False)   
         nature = phySphere.cells[j].type
-        #print nature
+
         if nature == "stock":
-            piH = np.asarray(phySphere.cells[j].cell.record.piH)
-            piL = np.asarray(phySphere.cells[j].cell.record.piL)
-            Exergy = ( piH - piL ) / piH
+            muH = np.asarray(phySphere.cells[j].cell.record.muH)
+            muL = np.asarray(phySphere.cells[j].cell.record.muL)
+            Exergy = ( muH - muL ) / muH
             dfEx = pd.DataFrame(Exergy)
             nameEx = "Exergy_" + str(j)
-            fichierEx = nameEx + ".xlsx"
-            writer = pd.ExcelWriter(f + fichierEx, engine='xlsxwriter')
-            dfEx.to_excel(writer, sheet_name=nameEx)
-            writer.close()
+            fichierEx = nameEx + ".txt"
+            df.to_csv(f + fichierEx, sep='\t', index=False)
 
     np.savetxt(f + "Production.csv", phySphere.record.production, delimiter=";")
     np.savetxt(f + "Time.csv", phySphere.record.t, delimiter=";")
@@ -168,7 +173,7 @@ if save_xls:
 
 #   - phySphere.cells[i].cell.record contains arrays :
 #           - if phySphere.cells[i].type == "stock" :
-#                   t, Xh, Xl, Xs, Xb, piH, piL, Fhp, Flp, G, Gused, Fr, Fnr, Ip, Ipd, Ipmax, efficiency, hasStock, isLimitated, K, Rp
+#                   t, Xh, Xl, Xs, Xb, muH, muL, Fhp, Flp, G, Gused, Fr, Fnr, Ip, Ipd, Ipmax, efficiency, hasStock, isLimitated, K, Rp
 #           - if phySphere.cells[i].cell.type == "flow" :
 #                   t, G, Gused, Xs, Xb, eff, surface_installee, stockMax, K1, K2
 #

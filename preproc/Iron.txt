@@ -1,5 +1,5 @@
 type : stock
-name : fer
+name : iron
 total stock : 20000
 Xh_init : 20000
 Xl_init : 0

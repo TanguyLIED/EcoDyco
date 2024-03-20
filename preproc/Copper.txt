@@ -1,5 +1,5 @@
 type : stock
-name : cuivre
+name : copper
 total stock : 500000
 Xh_init : 500000
 Xl_init : 0

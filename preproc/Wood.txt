@@ -1,5 +1,5 @@
 type : stock
-name : bois
+name : wood
 total stock : 800000
 Xh_init : 800000
 Xl_init : 0

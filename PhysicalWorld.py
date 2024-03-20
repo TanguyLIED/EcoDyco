@@ -2,18 +2,17 @@
 """
 Created on Thu Mar 29 09:13:54 2018
 
-Je tente des changer des trucs
-
-@author: simon
+@author: simon X Tanguy
 """
 
 import math
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import matplotlib.collections as collections
 
-couleurs = ['tab:blue',
+choice_colors = ['tab:blue',
             'tab:orange',
             'tab:green',
             'tab:red',
@@ -24,44 +23,67 @@ couleurs = ['tab:blue',
             'tab:olive',
             'tab:cyan']
 
+choice_colors1 = ['#045a8d',
+            '#238b45',
+            '#bd0026',
+            '#6a51a3',
+            'tab:purple',
+            'tab:brown',
+            'tab:pink',
+            'tab:gray',
+            'tab:olive',
+            'tab:cyan']
+
+
+choice_colors2 = ['#74a9cf',
+            '#74c476',
+            '#fc4e2a',
+            '#9e9ac8',
+            'tab:purple',
+            'tab:brown',
+            'tab:pink',
+            'tab:gray',
+            'tab:olive',
+            'tab:cyan']
+
 
 class StockCellRecord :
-    #registre de tous les états et flux passés d'une cellule
+    # Register of all past states and flows of a cell
 
     def __init__(self, deltat, resourceName,
                  Xt, Xh_init, Xl_init, Xs_init,
-                 piH_init, piL_init, K0, Rp0 ) :
+                 muH_init, muL_init, K0, Rp0 ) :
 
         self.deltat = deltat
         self.resourceName = resourceName
-        #vecteur temps
+        # Time Vector
         self.t = [0]
-        #état des réservoirs
+        # State of the reservoirs
         self.Xt = Xt
         self.Xh = [Xh_init]
         self.Xl = [Xl_init]
         self.Xs = [Xs_init]
         self.Xb = [0]
-        #potentiels
-        self.piH = [piH_init]
-        self.piL = [piL_init]
-        #flux
+        # Potentials
+        self.muH = [muH_init]
+        self.muL = [muL_init]
+        # Flows
         self.Fhp = [0]
         self.Flp = [0]
         self.G = [0]
         self.Gused = [0]
         self.Fr = [0]
         self.Fnr = [0]
-        #intensités
-        self.Ip = [0]
-        self.Ipd = [0]
-        self.Ipmax = [0]
-        #autre
+        # Intensities
+        self.Jp = [0]
+        self.Jpd = [0]
+        self.Jpmax = [0]
+        # Other
         self.efficiency = [0]
-        self.hasStock = [-1] #-1 si pas de stock, 0 si stock compris "proche" de stock_cible, 1 si stock > autre
+        self.hasStock = [-1] # -1 if no stock, 0 if stock included "near" the target stock, 1 if stock > otherwise
         self.isLimitated = [False]
         self.K = [K0]
-        self.Rp = [Rp0]
+        self.Rp = [Rp0] # Friction
 
     def toString(self) :
         s = "ressource : " + str(self.resourceName)
@@ -72,17 +94,17 @@ class StockCellRecord :
         s += "Xs = " + str(self.Xs[-1])
         s += "Xs = " + str(self.Xs[-1])
         s += "Xb = " + str(self.Xb[-1])
-        s += "piH = " + str(self.piH[-1])
-        s += "piL = " + str(self.piL[-1])
+        s += "muH = " + str(self.muH[-1])
+        s += "muL = " + str(self.muL[-1])
         s += "Fhp = " + str(self.Fhp[-1])
         s += "Flp = " + str(self.Flp[-1])
         s += "G = " + str(self.G[-1])
         s += "Gused = " + str(self.Gused[-1])
         s += "Fr = " + str(self.Fr[-1])
         s += "Fnr = " + str(self.Fnr[-1])
-        s += "Ip = " + str(self.Ip[-1])
-        s += "Ipd = " + str(self.Ipd[-1])
-        s += "Ipmax = " + str(self.Ipmax[-1])
+        s += "Jp = " + str(self.Jp[-1])
+        s += "Jpd = " + str(self.Jpd[-1])
+        s += "Jpmax = " + str(self.Jpmax[-1])
         s += "efficiency = " + str(self.efficiency[-1])
         s += "hasStock = "  + str(self.hasStock[-1])
         s += "isLimitated = " + str(self.isLimitated[-1])
@@ -91,24 +113,24 @@ class StockCellRecord :
         return s
     
     def actualize(self,
-                  Xh, Xl, Xs, Xb, piH, piL, Fhp, Flp, G, Gused, Fr, Fnr, Ip, Ipd, Ipmax,
+                  Xh, Xl, Xs, Xb, muH, muL, Fhp, Flp, G, Gused, Fr, Fnr, Jp, Jpd, Jpmax,
                   efficiency, hasStock, isLimitated, K, Rp):
         self.t.append(self.t[-1] + self.deltat)
         self.Xh.append(Xh)
         self.Xl.append(Xl)
         self.Xs.append(Xs)
         self.Xb.append(Xb)
-        self.piH.append(piH)
-        self.piL.append(piL)
+        self.muH.append(muH)
+        self.muL.append(muL)
         self.Fhp.append(Fhp)
         self.Flp.append(Flp)
         self.G.append(G)
         self.Gused.append(Gused)
         self.Fr.append(Fr)
         self.Fnr.append(Fnr)
-        self.Ip.append(Ip)
-        self.Ipd.append(Ipd)
-        self.Ipmax.append(Ipmax)
+        self.Jp.append(Jp)
+        self.Jpd.append(Jpd)
+        self.Jpmax.append(Jpmax)
         self.efficiency.append(efficiency)
         self.hasStock.append(hasStock)
         self.isLimitated.append(isLimitated)
@@ -118,7 +140,7 @@ class StockCellRecord :
 #----------------------------------------------------------------------------------------    
 
 class StockCell :
-    #feuille qui décrit une ressource stock
+    # Sheet describing a stock resource
 
     def __init__(self,
                  deltat,
@@ -142,16 +164,16 @@ class StockCell :
         self.deltat = deltat
         self.name = name
         self.Xt = Xt            # total recoverable quantity 
-        self.Xh = Xh_init
-        self.Xl = Xl_init
+        self.Xh = Xh_init       # High reservoir
+        self.Xl = Xl_init       # Low reservoir
         self.Xs = Xt - Xh_init - Xl_init
-        self.Xb = 0                                     # Xbuffer : ce qui est "en attente", pret à être utilisé pour production de la recette, ou à partir au stock, à l'instant suivant
-        self.Ip = 0.1                                     #intensité nominale de fonctionnement
-        self.Ipd = self.Ip
+        self.Xb = 0                                     # Xbuffer: quantity that is "pending," ready to be sent to production (of a recipe) or to the stock at the next time step.
+        self.Jp = 0.1                                     # Nominal operating intensity
+        self.Jpd = self.Jp                               #Huh?
         self.K = K0
         self.Rp0 = Rp0
-        self.recyclingEnergyFlux = recyclingEnergyFlux  #flux d'énergie nécessaire pour obtenir un flux de recyclage de 1 unité de ressource par unité de temps
-        self.isEnergy = isEnergy                        #-1 si ce n'est pas une cellule énergie, beta > 0 si c'est une cellule qui peut produire de l'énergie. beta est le flux de ressource nécessaire pour produire une unité d'énergie
+        self.recyclingEnergyFlux = recyclingEnergyFlux  # Energy flux required to obtain a recycling flux of 1 unit of resource per unit of time
+        self.isEnergy = isEnergy                        # -1 if it is not an energy cell. Otherwise, isEnergy (>0) is the resource flux required to produce one unit of energy
         self.r = r
         self.to = to
         self.stock_cible = stock_cible
@@ -160,26 +182,24 @@ class StockCell :
         self.xc = xc
         self.x0 = x0
         self.RT = 1
-        self.piH0 = -1 * self.RT * math.log( xc ) # RT * math.log( x0/xc )  # piH0 is set such as piH(xH=0)=0
-        self.piL0 = -1 * self.RT * math.log( xc ) # RT * math.log( x0/xc )  # piLO is set such as piL(xL=1)=0 (<=> to piH0 = piL0)
-        self.record = StockCellRecord(deltat, name, Xt, Xh_init, Xl_init, Xt - Xh_init - Xl_init, self.piH(), self.piL(), K0, Rp0)
+        self.muH0 = -1 * self.RT * math.log( xc ) # RT * math.log( x0/xc )  # muH0 is set such as muH(xH=0)=0
+        self.muL0 = -1 * self.RT * math.log( xc ) # RT * math.log( x0/xc )  # muLO is set such as muL(xL=1)=0 (<=> to muH0 = muL0)
+        self.record = StockCellRecord(deltat, name, Xt, Xh_init, Xl_init, Xt - Xh_init - Xl_init, self.muH(), self.muL(), K0, Rp0)
 
 
     def toString(self) :
         print(self.record.toString())
 
 
-    def piH(self) :
-        # print(self.Xh) # virer
+    def muH(self) :
         if self.Xh > self.xc:
-            return self.piH0 + self.RT * math.log( self.Xh / self.Xt * self.x0  )
-        if self.Xh <= self.xc:  # minimal concentration is xc
-            return self.piH0 + self.RT * math.log( self.xc  )
+            return self.muH0 + self.RT * math.log( self.Xh / self.Xt * self.x0  )
+        if self.Xh <= self.xc:  # xc is the minimal concentration
+            return self.muH0 + self.RT * math.log( self.xc  )
 
 
-    def piL(self) :
-        # print(self.piL0 + self.RT * math.log( self.xc  )) # virer
-        return self.piL0 + self.RT * math.log( self.xc  )
+    def muL(self) :
+        return self.muL0 + self.RT * math.log( self.xc  )
 
 
 
@@ -193,25 +213,24 @@ class StockCell :
 
 
     def deltaPi(self) :
-        # print(self.piH() - self.piL())# virer
-        return self.piH() - self.piL()
+        return self.muH() - self.muL()
 
 
-    def Ipmax(self) :
+    def Jpmax(self) :
         return (self.deltaPi())/(2*self.Rp())
 
 
-    def Ipopt(self, Gd) :
+    def Jpopt(self, Gd) :
         delta = self.deltaPi()*self.deltaPi() - 4*self.Rp()*(Gd - self.Xs/self.deltat)
         if delta < 0 :
-            return self.IpMax()
+            return self.JpMax()
         else :
-            Ip =(self.deltaPi() - math.sqrt(delta))/(2*self.Rp())
-            if Ip < 0 :            # forbid negative flux
-                Ip = 0
-                return Ip
+            Jp =(self.deltaPi() - math.sqrt(delta))/(2*self.Rp())
+            if Jp < 0 :            # No negative flux allowed
+                Jp = 0
+                return Jp
             else :
-                return Ip
+                return Jp
     
     
     def actualize(self, inputs):
@@ -229,7 +248,7 @@ class StockCell :
         return Rp
     
     def iterate(self, Gused, Fr) :
-        #Cette fonction réalise une itération de Xh, Xl et Xs  
+        # This function performs one iteration of Xh, Xl, and Xs 
         
         self.K = self.K*(1-self.delta*self.deltat)
         if self.K < 1e-100 :
@@ -238,67 +257,59 @@ class StockCell :
         
         x = self.Xs
         dx = (self.record.G[-1] - self.record.Gused[-1])*self.deltat
-        self.Ipd += 10/self.stock_cible/self.Xt * \
+        self.Jpd += 10/self.stock_cible/self.Xt * \
             (self.stock_cible*self.Xt - x - 25*dx/self.deltat) * self.deltat
 
-        if self.Ipd < 1e-14 :
-            self.Ipd = 1e-14
+        if self.Jpd < 1e-14 :
+            self.Jpd = 1e-14
         
         isLimitated = False  
-        if self.Ipd > self.Ipmax() :
-            self.Ipd = self.Ipmax()
+        if self.Jpd > self.Jpmax() :
+            self.Jpd = self.Jpmax()
             isLimitated = True
             
-        self.Ip = (self.Ip + (self.deltat/self.to)*self.Ipd)/(1 + self.deltat/self.to)
+        self.Jp = (self.Jp + (self.deltat/self.to)*self.Jpd)/(1 + self.deltat/self.to)
         
-        if self.Ip > self.Ipmax():
-            self.Ip = self.Ipmax()
+        if self.Jp > self.Jpmax():
+            self.Jp = self.Jpmax()
         
-        # EH: ajout du 03/10/2018 pour empecher la les valeurs negatives de Ip 
-        if self.Ip < 0 :
-            self.Ip = 0
+        # Avoid negative values for Jp
+        if self.Jp < 0 :
+            self.Jp = 0
         
-        #on calcule toutes les flux pendant ce pas de temps 
-        #dans la zone de production, étant donné Xh et Xl au début de la période
-        if self.piH()*self.Ip < self.piL()*self.Ip + Rp*self.Ip*self.Ip : 
-            # remarque : on ne devrait jamais rentrer dans cette boucle, 
-            # puisque que on tourne a intensité qui est au maximum égale à 
-            # l'intensité qui permet la production maximale, mais on ne 
-            # dépasse jamais cette intensité.
-            print("\n\t si ce message apparait c'est que quelque chose cloche!!!")
-            print(self.Ipd)
-            print(self.Ip)
-            print(self.Ipmax())
+        # Compute the values of the flows during a time step.
+        if self.muH()*self.Jp < self.muL()*self.Jp + Rp*self.Jp*self.Jp : 
+            # One should never enter this loop because the intensity of a cell should always be less than or equal to the maximum production intensity.
+            print("\n\t If you read this message, something is wrong!!!")
+            print(self.Jpd)
+            print(self.Jp)
+            print(self.Jpmax())
             print(self.Rp())
             print(self.K)
          
         else :
-            Fhp = self.piH()*self.Ip
-            Flp = self.piL()*self.Ip + Rp*self.Ip*self.Ip
+            Fhp = self.muH()*self.Jp
+            Flp = self.muL()*self.Jp + Rp*self.Jp*self.Jp
             if Fhp > self.Xh/self.deltat :
                 Fhp = self.Xh/self.deltat
-                self.Ip = Fhp/self.piH()
-                self.Ipd = Fhp/self.piH()
-                Flp = self.piL()*self.Ip + Rp*self.Ip*self.Ip
+                self.Jp = Fhp/self.muH()
+                self.Jpd = Fhp/self.muH()
+                Flp = self.muL()*self.Jp + Rp*self.Jp*self.Jp
             G = Fhp - Flp
             
         efficiency = 0
         if Fhp != 0 :
             efficiency = G/Fhp
         
-        # on calcule ce qui va être recyclé naturellement pendant ce pas de temps, 
-        # étant donné Xh et Xl au début de la période
+        # Calculate what will be naturally recycled during this time step
         Fnr = 0
         if self.r > 0 :
-            #attention la fonction dans le papier est self.r*self.Xh*(1 - Th) *(Th/self.s - 1)
+            # Beware, the function in the paper is self.r * self.Xh * (1 - Th) * (Th / self.s - 1)
             Fnr = self.r*self.Xl*(1-math.exp(-(self.Xl/self.Xt)/0.5))
-#            s = 0.3
-#            Th = self.Xh/self.Xt
-#            Fnr = self.r*self.Xl*(1 - Th) *max(0, (Th/s - 1))
         
             
         if Fr + Fnr > self.Xl/self.deltat :
-            print("attention on perd de l'énergie - voir calcul de Fr de la cellule {}".format(self.name))
+            print("Attention, energy is being lost - see calculation of Fr for cell {}".format(self.name))
             if Fnr > self.Xl/self.deltat  :
                 Fnr = self.Xl/self.deltat
                 Fr = 0
@@ -321,93 +332,148 @@ class StockCell :
         else : 
             hasStock = 1.0
         
-        #on actualise Xh, Xl, Xs
+        # Update Xh, Xl, Xs
         self.Xs = self.Xs + self.Xb - Gused*self.deltat
         self.Xh = self.Xh + (- Fhp + Fr + Fnr)*self.deltat
         self.Xl = self.Xl + (Flp + Gused - Fr - Fnr)*self.deltat
         self.Xb = G * self.deltat
         
-        self.record.actualize(self.Xh, self.Xl, self.Xs, self.Xb, self.piH(), self.piL(), Fhp, Flp, G, Gused, Fr, Fnr, self.Ip, self.Ipd, self.Ipmax(), efficiency, hasStock, isLimitated, self.K, Rp)
+        self.record.actualize(self.Xh, self.Xl, self.Xs, self.Xb, self.muH(), self.muL(), Fhp, Flp, G, Gused, Fr, Fnr, self.Jp, self.Jpd, self.Jpmax(), efficiency, hasStock, isLimitated, self.K, Rp)
 
         
     def plot(self, indFigure):
         
         record = self.record
         
-        plt.figure(indFigure)
-        fs = 13
+        plt.figure(indFigure, figsize = (20, 14), tight_layout = True)
+        mpl.rcParams['axes.linewidth'] = 5
+        fs = 25
         plt.subplot(3,3,1)
-        plt.plot(record.t, record.Xh,label='$X_h}$',linewidth=1)
-        plt.plot(record.t, record.Xl,label='$X_l}$',linewidth=1)
-        plt.xlabel('$Time$',fontsize=fs)
-        plt.ylabel('$Reservoirs$',fontsize=fs)
-        plt.legend()
-        plt.grid(True)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+        plt.plot(record.t, record.Xh,label='$X_h}$',linewidth=4, color=choice_colors1[0])
+        plt.plot(record.t, record.Xl,label='$X_l}$',linewidth=4, color=choice_colors1[2])
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('Reservoirs',fontsize=fs)
+        plt.legend(fontsize = fs)
+        plt.grid(False)
 
     
         plt.subplot(3,3,2)
-        plt.plot(record.t, record.Fhp,label='$F_hp}$',linewidth=1)
-        plt.plot(record.t, record.Flp,label='$F_lp}$',linewidth=1)
-        plt.xlabel('$Time$',fontsize=fs)
-        plt.ylabel('$Fluxes$',fontsize=fs)
-        plt.legend()
-        plt.grid(True)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.Fhp,label='$F_hp}$',linewidth=4, color=choice_colors1[0])
+        plt.plot(record.t, record.Flp,label='$F_lp}$',linewidth=4, color=choice_colors1[2])
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('Flows',fontsize=fs)
+        plt.legend(fontsize = fs)
+        plt.grid(False)
+
     
     
         plt.subplot(3,3,3)
-        plt.plot(record.t, record.G,label='$G}$',linewidth=1)
-        plt.plot(record.t, record.Gused,label='$G_{used}$',linewidth=1)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.G,label='$G}$',linewidth=4, color=choice_colors1[0])
+        plt.plot(record.t, record.Gused,label='$G_{used}$',linewidth=4, color=choice_colors1[2])
 #        plt.plot(record.t, (np.array(record.Xb) + np.array(record.Xs))/self.deltat,label='$Available$',linewidth=1)
-        plt.xlabel('$Time$',fontsize=fs)
-        plt.ylabel('$Production$',fontsize=fs)
-        plt.legend()
-        plt.grid(True)
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('Production',fontsize=fs)
+        plt.legend(fontsize = fs)
+        plt.grid(False)
+
         
         
         plt.subplot(3,3,4)
-        plt.plot(record.t, record.Fnr,label='$F_{nr}$',linewidth=1)
-        plt.plot(record.t, record.Fr,label='$F_r}$',linewidth=1)
-        plt.xlabel('$Time$',fontsize=fs)
-        plt.ylabel('$Recycling$',fontsize=fs)
-        plt.legend()
-        plt.grid(True)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.Fnr,label='$F_{nr}$',linewidth=4, color=choice_colors1[0])
+        plt.plot(record.t, record.Fr,label='$F_r}$',linewidth=4, color=choice_colors1[2])
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('Recycling',fontsize=fs)
+        plt.legend(fontsize = fs)
+        plt.grid(False)
+
 
         
         plt.subplot(3,3,5)
-        plt.plot(record.t,record.Ip,label='$I_p}$',linewidth=1)
-        plt.plot(record.t,record.Ipmax, label='$I_p^{max}}$', linewidth=1)
-        plt.plot(record.t, record.Ipd, label='$I_p^{d}}$', linewidth=1)
-        plt.xlabel('$Time$',fontsize=fs)
-        plt.ylabel('$Prod Intensity$',fontsize=fs-5)
-        plt.legend()
-        plt.grid(True)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+        
+        plt.plot(record.t,record.Jp,label='$I_p}$',linewidth=4, color=choice_colors1[0])
+        plt.plot(record.t,record.Jpmax, label='$I_p^{max}}$', linewidth=4, color=choice_colors1[2])
+        plt.plot(record.t, record.Jpd, label='$I_p^{d}}$', linewidth=4, color=choice_colors1[1])
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('Prod Intensity',fontsize=fs-5)
+        plt.legend(fontsize = fs)
+        plt.grid(False)
+
         
     
         plt.subplot(3,3,6)
-        plt.plot(record.t, record.Xs,linewidth=1)
-        plt.xlabel('$Time$',fontsize=fs)
-        plt.ylabel('$Stock$',fontsize=fs)
-        #plt.legend()
-        plt.grid(True)
-#        plt.yscale('log')
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.Xs,linewidth=4, color=choice_colors1[0])
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('Stock',fontsize=fs)
+        #plt.legend(fontsize = fs)
+        plt.grid(False)
     
         
         plt.subplot(3,3,7)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=0, labelsize=24)
+        
         plt.yscale('log')
-        plt.plot(record.t, record.Rp,linewidth=1)
-        plt.xlabel('$Time$',fontsize=fs)
-        plt.ylabel('$R_p$',fontsize=fs)
-        #plt.legend()
-        plt.grid(True)
+        plt.plot(record.t, record.Rp,linewidth=4, color=choice_colors1[0])
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('R$_p$',fontsize=fs)
+        #plt.legend(fontsize = fs)
+        plt.grid(False)
+
         
     
         plt.subplot(3,3,8)
-        plt.plot(record.t, np.array(record.piH)-np.array(record.piL),linewidth=1)
-        plt.xlabel('$Time$',fontsize=fs)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, np.array(record.muH)-np.array(record.muL),linewidth=4, color=choice_colors1[0])
+        plt.xlabel('Time',fontsize=fs)
         plt.ylabel('$\Delta \pi$',fontsize=fs)
         # plt.ylim((0, 1))
-        #plt.legend()
-        plt.grid(True)
+        #plt.legend(fontsize = fs)
+        plt.grid(False)
+
     
         
         plt.subplot(3,3,9)
@@ -415,13 +481,13 @@ class StockCell :
         plt.yticks([])
         
         plt.text(0.05, 0.85 , self.name, fontsize=fs-5)
-        plt.text(0.05, 0.70 , r'$Total=$'    +str(self.Xt), fontsize=fs-5)
-        plt.text(0.05, 0.55 , r'$Nat_R=$'    +str(self.r), fontsize=fs-5)
-        plt.text(0.05, 0.40 , r'$Duration=$' +str(int(len(record.t)-1)*self.deltat), fontsize=fs-5)
-        plt.text(0.05, 0.25 , r'$Time_{step}=$'+str(self.deltat), fontsize=fs-5)
-
-    
+        plt.text(0.05, 0.70 , r'Total='    +str(self.Xt), fontsize=fs-5)
+        plt.text(0.05, 0.55 , r'Nat$_R$='    +str(self.r), fontsize=fs-5)
+        plt.text(0.05, 0.40 , r'Duration=' +str(int(len(record.t)-1)*self.deltat), fontsize=fs-5)
+        plt.text(0.05, 0.25 , r'Time step='+str(self.deltat), fontsize=fs-5)
+        
         plt.grid(False)
+
     
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.7, hspace=0.6)
         plt.tight_layout()
@@ -430,7 +496,7 @@ class StockCell :
 
 class FlowCellRecord :
     
-    def __init__(self, deltat, name, eff_init, surface_installee_init, stockMax_init, K1_init, K2_init):
+    def __init__(self, deltat, name, eff_init, installed_surface_init, stockMax_init, K1_init, K2_init):
         self.deltat = deltat
         self.name = name
         self.t = [0]
@@ -439,19 +505,19 @@ class FlowCellRecord :
         self.Xs = [0]
         self.Xb = [0]
         self.eff = [eff_init]
-        self.surface_installee = [surface_installee_init]
+        self.installed_surface = [installed_surface_init]
         self.stockMax = [stockMax_init]
         self.K1 = [K1_init]
         self.K2 = [K2_init]
 
-    def actualize(self, G, Gused, Xs, Xb, eff, surface_installee, stockMax, K1, K2):
+    def actualize(self, G, Gused, Xs, Xb, eff, installed_surface, stockMax, K1, K2):
         self.t.append(self.t[-1] + self.deltat)
         self.G.append(G)
         self.Gused.append(Gused)
         self.Xs.append(Xs)
         self.Xb.append(Xb)
         self.eff.append(eff)
-        self.surface_installee.append(surface_installee)
+        self.installed_surface.append(installed_surface)
         self.stockMax.append(stockMax)
         self.K1.append(K1)
         self.K2.append(K2)
@@ -459,22 +525,22 @@ class FlowCellRecord :
 #-----------------------------------------------------------------------------------------------------------------------
 
 class FlowCell :
-    #décrit une resource flow
+    # Sheet describing a flow resource
 
-    def __init__(self, deltat, name, incidentFlow, eff_init, surface_installee, isEnergy, stockMax_init, delta):
+    def __init__(self, deltat, name, incidentFlow, eff_init, installed_surface, isEnergy, stockMax_init, delta):
         self.deltat = deltat
         self.name = name        
         self.incidentFlow = incidentFlow
         self.Xs = 0
         self.Xb = 0
         self.efficiency = eff_init      
-        self.surface_installee_init = surface_installee
+        self.installed_surface_init = installed_surface
         self.isEnergy = isEnergy
         self.stockMax_init = stockMax_init
         self.K1 = 1
         self.K2 = 1
         self.delta = delta
-        self.record = FlowCellRecord(deltat, name, eff_init, self.surface_installee_init, stockMax_init, self.K1, self.K2)
+        self.record = FlowCellRecord(deltat, name, eff_init, self.installed_surface_init, stockMax_init, self.K1, self.K2)
         
     
     def actualize(self, inputs):
@@ -484,11 +550,11 @@ class FlowCell :
         self.delta = inputs[3]
 
 
-    def surface_installee(self):
-        surface_installee = self.surface_installee_init*math.log(1+self.K1/self.record.K1[0])
-        if surface_installee > 1 :
-            surface_installee = 1
-        return surface_installee
+    def installed_surface(self):
+        installed_surface = self.installed_surface_init*math.log(1+self.K1/self.record.K1[0])
+        if installed_surface > 1 :
+            installed_surface = 1
+        return installed_surface
         
     def stockMax(self):
         return self.stockMax_init*math.log(1+self.K2/self.record.K2[0])
@@ -498,51 +564,92 @@ class FlowCell :
         self.K1 = self.K1*(1 - self.deltat*self.delta)
         self.K2 = self.K2*(1 - self.deltat*self.delta)
         
-        surface_installee = self.surface_installee()
+        installed_surface = self.installed_surface()
         stockMax = self.stockMax()
         
-        G = self.efficiency * surface_installee * self.incidentFlow
+        G = self.efficiency * installed_surface * self.incidentFlow
         self.Xb = G * self.deltat
         self.Xs = self.Xs + self.Xb - Gused * self.deltat
         
         if self.Xs > stockMax :
             self.Xs = stockMax
         
-        self.record.actualize(G, Gused, self.Xs, self.Xb, self.efficiency, surface_installee, stockMax, self.K1, self.K2)
+        self.record.actualize(G, Gused, self.Xs, self.Xb, self.efficiency, installed_surface, stockMax, self.K1, self.K2)
         
         
     def plot(self, indFigure):
         record = self.record
-        plt.figure()
+        plt.figure(figsize = (20, 14), tight_layout = True)
+        
+        fs=25
         
         plt.subplot(2, 3, 1)
-        plt.plot(record.t, record.G, label='$G$')
-        plt.plot(record.t, record.Gused, label='$G_{used}$')
-        plt.grid(True)
-        plt.legend()
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.G, label='$G$', linewidth=4, color=choice_colors1[0])
+        plt.plot(record.t, record.Gused, label='$G_{used}$', ls='None', marker='x', markersize=5, markevery=30, color=choice_colors1[2])
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('Production',fontsize=fs)
+        plt.legend(fontsize = fs)
+        plt.grid(False)
         
         plt.subplot(2, 3, 2)
-        plt.plot(record.t, record.Xs, label='$Stock$')
-        plt.plot(record.t, record.stockMax, label='$Stock Max$', linestyle='-.')
-        plt.grid(True)
-        plt.legend()   
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.Xs, label='Stock',linewidth=4, color=choice_colors1[0])
+        plt.plot(record.t, record.stockMax, label='Stock$_{Max}$', linestyle='-.',linewidth=4, color=choice_colors1[2])
+        plt.ylabel('Stocks',fontsize=fs)
+        plt.xlabel('Time',fontsize=fs)
+        plt.legend(fontsize = fs)
+        plt.grid(False)  
         
         plt.subplot(2, 3, 3)
-        plt.plot(record.t, record.eff, label='$efficiency$')
-        plt.grid(True)
-        plt.legend()
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.eff, label='efficiency', linewidth=4, color=choice_colors1[2])
+        plt.ylabel('$\eta$',fontsize=fs)
+        plt.xlabel('Time',fontsize=fs)
+        #plt.legend(fontsize = fs)
+        plt.grid(False)
+        
         
         plt.subplot(2, 3, 4)
-        plt.plot(record.t, record.K1, label='$K1$')
-        plt.plot(record.t, record.K2, label='$K2$')
-        plt.grid(True)
-        plt.legend()
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.K1, label='$K_1$',linewidth=4, color=choice_colors1[0])
+        plt.plot(record.t, record.K2, label='$K_2$',linewidth=4, color=choice_colors1[2])
+        plt.legend(fontsize = fs)
+        plt.xlabel('Time',fontsize=fs)
+        plt.grid(False)
+        
         
         plt.subplot(2, 3, 5)
-        plt.plot(record.t, record.surface_installee, label='$surface installee$')
-        plt.grid(True)
-        plt.legend()
-        plt.tight_layout()
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(width=5, direction="in", length=10, labelsize=20, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
+        plt.plot(record.t, record.installed_surface, linewidth=4, color=choice_colors[0])
+        plt.ylabel('Installed Surface',fontsize=fs)
+        plt.xlabel('Time',fontsize=fs)
+        plt.grid(False)
                 
 #############################################################################################################################################
             
@@ -587,37 +694,37 @@ class PhysicalWorldRecord :
 #----------------------------------------------------------------------------------        
         
 class PhysicalWorld :
-    #ensemble de feuilles stock et flow
+    # Set of stock and flow sheets
     
-    def __init__(self, deltat, cells, recipeMatrix, recipeRequestArray_init, requestedEnergyMix) :
+    def __init__(self, deltat, cells, recipeMatrix, recipeRequestArray_init, requestedEnergyMix, recipeNames) :
         self.deltat = deltat
         self.cells = cells
-        self.recipeMatrix = recipeMatrix        #cette matrice indique la recette (ingrédients et flux nécessaire) pour produire un flux de une unité de produit par unité de temps. Elle a un nombre de ligne égal au nombre de recettes, et un nombre de colonnes égal au nombre de cellules (ingrégients)
-                                                #la i_ème ligne k_ème colonne de cette matrice correspond à la demande en ressource k de la recette i à l'instant considéré. C'est la demande non-agrégée.
-        
-        self.n_cells = len(cells)
-        self.recipeToRecycle = [-1]*self.n_cells  #tableau de correspondance entre une ressource et la position de la recette pour la recycler dans la matrice des recettes. Position = -1 si pas de recette pour recycler la ressource
-        
+        self.recipeMatrix = recipeMatrix      # Each column ndicates the recipe (materials and energy quantities) to produce one unit of a specific good per unit of time. This is the non-aggregated demand.
+        self.n_cells = len(cells)    # Number of cells in the physical world
+        self.recipeToRecycle = [-1]*self.n_cells  # Correspondence array between a resource and the position of the recipe to recycle it in the recipe matrix. Position = -1 if there is no recipe to recycle the resource.
+        self.recipeNames = recipeNames
+        print(recipeNames[0])
         self.recipeRequestArray = []
         for i in range(len(recipeRequestArray_init)):
             self.recipeRequestArray.append(recipeRequestArray_init[i])
         
         
-        for i in range(self.n_cells) :            #ajout des recettes de recyclage à recipeMatrix et remplissage de recipeToRecycle
-            if self.cells[i].type == "stock" :
+        for i in range(self.n_cells) :            # Adding recycling recipes to recipeMatrix and filling recipeToRecycle
+            if self.cells[i].type == "stock" :    
                 ind = np.shape(recipeMatrix)[0]
-                if self.cells[i].cell.recyclingEnergyFlux >= 0 :
+                if self.cells[i].cell.recyclingEnergyFlux >= 0 :      # -1 for a resource that can't be recycled
                     array = [0]*(self.n_cells+1)
-                    array[-1] = self.cells[i].cell.recyclingEnergyFlux
-                    self.recipeMatrix.append(array)
-                    self.recipeToRecycle[i] = ind
+                    array[-1] = self.cells[i].cell.recyclingEnergyFlux  # Energy cost for recycling
+                    self.recipeMatrix.append(array)   # Adding the new recipe
+                    self.recipeToRecycle[i] = ind     # ind is the position of the recycling recipe for the cell resource i
+                    self.recipeNames.append('Recycled ' +self.cells[i].cell.name)  # Adding the recipe name
                     self.recipeRequestArray.append(0)
-                    ind += 1
+                    
         self.requestedEnergyMix = requestedEnergyMix
         self.record = PhysicalWorldRecord(deltat, len(self.recipeRequestArray), self.n_cells)
 
     def isARecyclingRecipe(self, i):
-        #renvoie l'emplacement de la ressource dans self.cells si la recette a la ligne i dans RecipeMatrix est une recette de recyclage, renvoie -1 sinon
+        # Returns the location of the resource in self.cells if the recipe on line i in RecipeMatrix is a recycling recipe. Returns -1 otherwise
         for k in range(self.n_cells):
             if self.recipeToRecycle[k] == i :
                 return k
@@ -628,7 +735,7 @@ class PhysicalWorld :
     def availableResource(self):
         availableResource =  [0]*(self.n_cells + 1)
         for i in range(self.n_cells) :
-            availableResource[i] = (self.cells[i].cell.record.Xb[-1] + self.cells[i].cell.record.Xs[-1])/self.deltat
+            availableResource[i] = (self.cells[i].cell.record.Xb[-1] + self.cells[i].cell.record.Xs[-1])/self.deltat   # Available flux of resource (buffer + stock)
             if self.cells[i].cell.isEnergy:
                 availableResource[-1] += availableResource[i]
         return availableResource
@@ -646,14 +753,14 @@ class PhysicalWorld :
                 return True
         return False
     
-    def somme(self, rec, j):
+    def somme(self, req, j):  # Total quantity of resource j required 
         s = 0
-        for i in range(len(rec)):
-            if rec[i]:
-                s += self.recipeRequestArray[i]*self.recipeMatrix[i][j]
+        for i in range(len(req)):
+            if req[i]:  # The good i is required
+                s += self.recipeRequestArray[i]*self.recipeMatrix[i][j]   # Quantity of goods * quantity of resources per good
         return s
 
-    def indMiniPos(self, l):
+    def indMiniPos(self, l):    # Index of the smallest positive number (or -.1 if no positive numbers)
         ind = -0.1
         for i in range(len(l)):
             if l[i] > 0 :
@@ -667,53 +774,52 @@ class PhysicalWorld :
     
     
     def produce(self) :
-        #renvoie le tableau used contenant les quantités prélevées à chaque ressource pour production (Gused).
-        #renvoie également le quantités produites pour chaque recette à cette itération
-        #voir fichier algo "attributionResourcesauxRecettes
+        # Returns the 'used' array containing the quantities taken from each resource for production (Gused).
+        # Also returns the quantities produced for each recipe in this iteration.
         n_ing = self.n_cells + 1
-        n_rec = len(self.recipeRequestArray)
+        n_req = len(self.recipeRequestArray)  # Number of types of goods required
         coeff = self.recipeRequestArray
-        dispo = self.availableResource()
-        used = [0]*n_ing
-        prod = [0]*n_rec
+        avail = self.availableResource()        # Available resources at the current state
+        used = [0]*n_ing  # used resources                       
+        prod = [0]*n_req  # produced goods
 
         disp = []
-        for i in range(len(dispo)):
-            disp.append(dispo[i])
+        for i in range(len(avail)):
+            disp.append(avail[i])    # Simple copy of avail
     
-        rec = [True]*n_rec
-        prodNeeded = [True]*n_rec   
-        s = []
+        req = [True]*n_req    # True for a required good
+        prodNeeded = [True]*n_req  
+        s = []  # Will represent the priority of the resource
         k = 0
         
-        while self.test(rec) and self.test(prodNeeded):
+        while self.test(req) and self.test(prodNeeded):     # Something still needs to be produced
             array = []
             for j in range(n_ing):
-                if self.somme(rec, j) != 0:
-                    array.append(disp[j]/self.somme(rec, j))
+                if self.somme(req, j) != 0:   # Resource j is required
+                    array.append(disp[j]/self.somme(req, j))  # Priority of the resource
                 else :
                     array.append(-1)
             s.append(array)
             
-            j0 = self.indMiniPos(s[k])
+            j0 = self.indMiniPos(s[k]) # Resource with the highest priority
             if j0 != - 0.1 : 
-                for i in range(n_rec) :
-                    if self.recipeMatrix[i][j0] > 0 and rec[i] :
-                        prod[i] = coeff[i]*min(s[k][j0], 1)
+                for i in range(n_req) :
+                    if self.recipeMatrix[i][j0] > 0 and req[i] :
+                        prod[i] = coeff[i]*min(s[k][j0], 1)  # Produces what is required or less if no resource availability is limited
                         for j in range(n_ing):
-                            disp[j] -= self.recipeMatrix[i][j]*prod[i]
-                            used[j] += self.recipeMatrix[i][j]*prod[i]
-                        rec[i] = False
-                for i in range(n_rec) :
+                            disp[j] -= self.recipeMatrix[i][j]*prod[i]  # less available resources
+                            used[j] += self.recipeMatrix[i][j]*prod[i]  # more used resources
+                        req[i] = False
+                for i in range(n_req) :
                     if prod[i] >= coeff[i]:
                         prodNeeded[i] = False
                 k += 1
             else :
-                for i in range(n_rec) :
-                    rec[i] = False
+                for i in range(n_req) :
+                    req[i] = False
                 
 
-        #répartition de l'usage de l'énergie sur les différentes cellules énergie
+        # Distribution of energy usage among different energy cells
         tempNrjMix = []
         for j in range(len(self.requestedEnergyMix)):
             tempNrjMix.append(self.requestedEnergyMix[j])
@@ -729,7 +835,7 @@ class PhysicalWorld :
             array = []
             for j in range(self.n_cells):
                 if tempNrjMix[j] != 0 and flags[j]:
-                    array.append(dispo[j]/tempNrjMix[j])
+                    array.append(avail[j]/tempNrjMix[j])
                 else :
                     array.append(-1)
             j0 = self.indMiniPos(array)
@@ -739,7 +845,7 @@ class PhysicalWorld :
                     if flags[j]:
                         add = min(tempNrjMix[j]*(used[-1] - Utemp), tempNrjMix[j]*array[j0])
                         used[j] += add
-                        dispo[j] -= add
+                        avail[j] -= add
                         Utemptemp += add
                 tempNrjMix[j0] = 0
                 flags[j0] = False
@@ -748,11 +854,9 @@ class PhysicalWorld :
                 if somme > 0:
                     for j in range(len(tempNrjMix)):
                         tempNrjMix[j] = tempNrjMix[j]/somme
-            else : #on sort du while
+            else : # Exit the while loop if no suitable energy cell found
                 for j in range(self.n_cells):
                     flags[j] = False
-                    
-#        print("\nt: {}, availableResource : {}, Gused : {}".format(self.record.t[-1], self.availableResource(), used))
 
         return (used, prod)
     
@@ -776,16 +880,16 @@ class PhysicalWorld :
     
     
     def iterate(self):
-        #produce
+        # produce
         (Gused, produced) = self.produce()
         
-        #actualize record
+        # actualize record
         request = []
         for i in range(len(self.recipeRequestArray)):
             request.append(self.recipeRequestArray[i])
         self.record.actualize(produced, request, self.computeEnergyMix(Gused), self.requestedEnergyMix)
         
-        #iterate cells
+        # iterate cells
         Fr = [0]*self.n_cells
         for i in range(self.n_cells):
             if self.cells[i].type =="stock" and self.cells[i].cell.recyclingEnergyFlux >= 0 :
@@ -813,86 +917,160 @@ class PhysicalWorld :
     def plot(self) :
         
         for k in range(self.n_cells):
-            self.cells[k].plot(k+1)
+            self.cells[k].plot(k+1) 
             
-        plt.figure()
-        fs = 18
+        plt.figure(figsize = (20, 14), tight_layout = True)
+        mpl.rcParams['axes.linewidth'] = 10
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=10, direction="in", length=18, labelsize=30, pad=20)
+        ax.xaxis.set_tick_params(width=10, direction="in", length=18, labelsize=30, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+
+        fs = 40
         productionRecord = np.array(self.record.production)
         requestRecord = np.array(self.record.request)
         energyMix = np.array(self.record.realEnergyMix)
         qty = self.quantityProduced()
         for i in range(len(self.recipeRequestArray)) :
-            plt.plot(self.record.t, productionRecord[:, i], label='recipe ' + str(i), color=couleurs[i])
-            plt.plot(self.record.t, requestRecord[:, i], ls = '--', color=couleurs[i])
+            plt.plot(self.record.t, productionRecord[:, i], label=self.recipeNames[i], color=choice_colors1[i], linewidth = 2)
             plt.xlabel('$Time$',fontsize=fs)
             plt.ylabel('$Production$',fontsize=fs)
-            plt.grid(True)
+            plt.grid(False)
             print("recipe {}, aggregated production : {}".format(i, qty[i]))
-        plt.legend()
+        plt.legend(fontsize = 30)
         plt.tight_layout()
         
-        plt.figure()
+        
+        
+        
+        
+        
+        
+        
+        plt.figure(figsize = (20, 14), tight_layout = True)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=10, direction="in", length=18, labelsize=30, pad=20)
+        ax.xaxis.set_tick_params(width=10, direction="in", length=18, labelsize=30, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+
+        for i in range(len(self.recipeRequestArray)) :
+            
+            # Index of the production max
+            Pos_max = np.argmax(productionRecord[:, i])
+            # 0.5 * Number of production values greater than max/100
+            Width_peak = int(0.5 * np.size(productionRecord[:, i][productionRecord[:, i]>(max(productionRecord[:, i])/10)]))
+            
+            plt.plot(self.record.t[Pos_max - Width_peak : Pos_max + Width_peak], productionRecord[:, i][Pos_max - Width_peak : Pos_max + Width_peak], label=self.recipeNames[i], color=choice_colors1[i], linewidth = 7)
+            plt.plot(self.record.t[Pos_max - Width_peak : Pos_max + Width_peak], requestRecord[:, i][Pos_max - Width_peak : Pos_max + Width_peak], ls = '--', color=choice_colors2[i], label = "Requested", linewidth = 5)
+            plt.xlabel('$Time$',fontsize=fs)
+            plt.ylabel('$Production$',fontsize=fs)
+            plt.grid(False)
+        plt.legend(fontsize = 30)
+        plt.tight_layout()
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        plt.figure(figsize = (20, 14), tight_layout = True)
         plt.subplot(1, 2, 1)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=10, direction="in", length=18, labelsize=30, pad=20)
+        ax.xaxis.set_tick_params(width=10, direction="in", length=18, labelsize=30, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
+        
         for i in range(self.n_cells):
             if self.cells[i].cell.isEnergy :
-                plt.plot(self.cells[0].cell.record.t, energyMix[:, i], label='instant ' + str(self.cells[i].cell.name))
-                plt.xlabel('$Time$',fontsize=fs)
-                plt.ylabel('$Energy Mix$',fontsize=fs)    
-                plt.grid(True)
-        plt.legend()
+                plt.plot(self.cells[0].cell.record.t, energyMix[:, i], label='instant ' + str(self.cells[i].cell.name), color=choice_colors1[i], linewidth = 3)
+                plt.xlabel('Time',fontsize=fs)
+                plt.ylabel('Energy Mix',fontsize=fs)    
+                plt.grid(False)
+        plt.legend(fontsize=30)
         
         
         plt.subplot(1, 2, 2)
+        ax = plt.gca()
+        ax.yaxis.set_tick_params(width=10, direction="in", length=18, labelsize=30, pad=20)
+        ax.xaxis.set_tick_params(width=10, direction="in", length=18, labelsize=30, pad=20)
+        ax.xaxis.set_tick_params(which = 'minor', width=2, length=0, labelsize=15)
+        ax.yaxis.set_tick_params(which = 'minor', width=5, direction="in", length=13, labelsize=24)
         energyConsumption = np.zeros(len(self.cells[0].cell.record.t))
         for i in range(self.n_cells):
             if self.cells[i].cell.isEnergy :
                 energyConsumption += np.array(self.cells[i].cell.record.Gused)
-        plt.plot(self.cells[0].cell.record.t, energyConsumption)
-        plt.grid(True)
-        plt.xlabel('$Time$',fontsize=fs)
-        plt.ylabel('$Energy Consumption$',fontsize=fs) 
+        plt.plot(self.cells[0].cell.record.t, energyConsumption, color=choice_colors1[3], linewidth = 3)
+        plt.grid(False)
+        plt.xlabel('Time',fontsize=fs)
+        plt.ylabel('Energy Consumption',fontsize=fs) 
         plt.tight_layout()
         
-        fig, axs = plt.subplots(self.n_cells, 1, sharex = True)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        fig, axs = plt.subplots(self.n_cells, 1, sharex = True, figsize = (30, 21), tight_layout = True)
         fig.subplots_adjust(hspace=0)
         for i in range(self.n_cells):
             record = self.cells[i].cell.record
             t = np.array(record.t)
             if self.cells[i].type == "stock" :
-                axs[i].plot(t, np.array(record.Xs)/(self.cells[i].cell.stock_cible*self.cells[i].cell.Xt), label='% stock cible', color = 'tab:orange')
-                axs[i].grid(True)
+                axs[i].plot(t, np.array(record.Xs)/(self.cells[i].cell.stock_cible*self.cells[i].cell.Xt), label='% target stock', linewidth=10, color = choice_colors1[0])
+                axs[i].grid(False)
                 hasStock = np.array(record.hasStock)
                 isLimitated = np.array(record.isLimitated)
                 ymaxi = max(record.Xs)/(self.cells[i].cell.stock_cible*self.cells[i].cell.Xt)
+                
                 collection = collections.BrokenBarHCollection.span_where(
                         t, ymin=0, ymax=ymaxi, where=hasStock == 1.5, facecolor='black', alpha=0.8)
-                axs[i].add_collection(collection)
+                #axs[i].add_collection(collection)
                 collection = collections.BrokenBarHCollection.span_where(
                     t, ymin=0, ymax=ymaxi, where=hasStock == 1.0, facecolor='grey', alpha=0.8)
-                axs[i].add_collection(collection)
+                #axs[i].add_collection(collection)
                 collection = collections.BrokenBarHCollection.span_where(
-                    t, ymin=0, ymax=ymaxi, where=hasStock == 0.5, facecolor='grey', alpha=0.2)
-                axs[i].add_collection(collection)
+                    t, ymin=0, ymax=ymaxi, where=hasStock == 0.1, facecolor='grey', alpha=0.2)
+                #axs[i].add_collection(collection)
                 collection = collections.BrokenBarHCollection.span_where(
                     t, ymin=0, ymax=ymaxi/10.0, where=isLimitated == True, facecolor='red', alpha=0.2)
-                axs[i].add_collection(collection)
+                #axs[i].add_collection(collection)
+                
+                
                 ax = axs[i].twinx()
-                ax.plot(t, np.array(record.piH) - np.array(record.piL),label='$\Delta \pi$')
-                ax.legend()
+                ax.plot(t, np.array(record.muH) - np.array(record.muL),label='$\Delta \mu$', linewidth=10, color = choice_colors1[2])
+                ax.legend(fontsize=35, loc='lower right')
+                ax.yaxis.set_tick_params(width=10, direction="in", length=18, labelsize=40, pad=20, labelcolor=choice_colors1[2])
+                
+                
             if self.cells[i].type == "flow" :
-                axs[i].plot(t, np.array(record.Xs)/(record.stockMax), label='% stock max', color = 'tab:orange')
-                axs[i].grid(True)
+                axs[i].plot(t, np.array(record.Xs)/(record.stockMax), label='% stock max', color = choice_colors[0], linewidth=10)
+                axs[i].grid(False)
                 stockMax=self.cells[i].cell.stockMax
                 ymaxi = max(record.Xs)
+                
                 collection = collections.BrokenBarHCollection.span_where(
                         t, ymin=0, ymax=ymaxi, where=np.array(record.Xs)>1e-14, facecolor='grey', alpha=0.2)
-                axs[i].add_collection(collection)
+                #axs[i].add_collection(collection)
                 collection = collections.BrokenBarHCollection.span_where(
                         t, ymin=0, ymax=ymaxi, where=np.array(record.Xs) ==stockMax, facecolor='grey', alpha=0.8)
-                axs[i].add_collection(collection)
+                #axs[i].add_collection(collection)
                 
-            axs[i].legend()
-            axs[i].set_title(self.cells[i].cell.name, loc='center', x=-0.05, y=0.5, rotation='horizontal')
+            axs[i].legend(fontsize=35)
+            axs[i].set_title(self.cells[i].cell.name, loc='center', x=-0.1, y=0.5, rotation='horizontal', fontsize=50)
+            axs[i].yaxis.set_tick_params(width=10, direction="in", length=18, labelsize=40, pad=20, labelcolor=choice_colors1[0])
+            axs[i].xaxis.set_tick_params(width=10, direction="in", length=18, labelsize=40, pad=20)
             plt.tight_layout()
     
 
@@ -937,7 +1115,7 @@ def extractWorldParameters(fichier, rep_p):  #
         value = splitline[1].split("\n")[0]
         if name == "alpha " or name == "delta " or name == "stock_cible ":
             value = float(value)
-        elif name == "recipeMatrix " or name=="recipeRequestArray_init " or name == "energyMix ":
+        elif name == "recipeMatrix " or name=="recipeRequestArray_init " or name == "energyMix " or name == "recipeNames ":
             value = value.split("], ")
             value[0] = value[0][1:]
             value[-1] = value[-1][:-1]
@@ -948,9 +1126,10 @@ def extractWorldParameters(fichier, rep_p):  #
                 if name == "recipeMatrix " :
                     value[j][0] = value[j][0][1:]
                     value[j][-1] = value[j][-1][:-1]
-                for i in range(len(value[j])):
-                    value[j][i] = float(value[j][i])  
-                if name =="recipeRequestArray_init " or name =="energyMix ":
+                if name != "recipeNames ":
+                    for i in range(len(value[j])):            
+                        value[j][i] = float(value[j][i])
+                if name =="recipeRequestArray_init " or name =="energyMix " or name =="recipeNames ":
                     value = value[0]
         elif name == "cells ":
             value = value.split(", ")
@@ -968,4 +1147,4 @@ def createPhysicalWorld(fichier, rep_p, deltat):  #
         cellName = p[5][i] + ".txt"  
         q = extractCellParameters(cellName, rep_p)
         cells.append(Cell(createCell(cellName, rep_p, p[0], p[1], p[2], deltat), q[0]))
-    return PhysicalWorld(deltat, cells, p[3], p[4], p[6])
+    return PhysicalWorld(deltat, cells, p[3], p[4], p[6], p[-1])
